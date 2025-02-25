@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# Переконуємося, що програма скомпільована
-echo "Компіляція програми..."
+# Make sure the program is compiled
+echo "Compiling program..."
 go build -o vad_tester
 
-# Базові параметри
+# Base parameters
 MODEL="../../testfiles/silero_vad.onnx"
 AUDIO="../../testfiles/samples2.pcm"
 SR=16000
 
-# Функція для запуску тесту з певними параметрами
+# Function to run test with specific parameters
 run_test() {
     local name=$1
     local threshold=$2
@@ -19,14 +19,14 @@ run_test() {
     local speech_pad=$6
     
     echo "============================================================"
-    echo "Тест: $name"
+    echo "Test: $name"
     echo "------------------------------------------------------------"
-    echo "Параметри:"
+    echo "Parameters:"
     echo "  Threshold: $threshold"
     echo "  Negative Threshold: $neg_threshold"
-    echo "  Min Silence Duration: $min_silence мс"
-    echo "  Min Speech Duration: $min_speech мс"
-    echo "  Speech Pad: $speech_pad мс"
+    echo "  Min Silence Duration: $min_silence ms"
+    echo "  Min Speech Duration: $min_speech ms"
+    echo "  Speech Pad: $speech_pad ms"
     echo "------------------------------------------------------------"
     
     ./vad_tester \
@@ -43,37 +43,37 @@ run_test() {
     echo ""
 }
 
-# Тест 1: Базові параметри
-run_test "Базові параметри" 0.5 0.0 500 250 30
+# Test 1: Base parameters
+run_test "Base parameters" 0.5 0.0 500 250 30
 
-# Тест 2: Низький поріг для мови
-run_test "Низький поріг для мови" 0.3 0.0 500 250 30
+# Test 2: Low speech threshold
+run_test "Low speech threshold" 0.3 0.0 500 250 30
 
-# Тест 3: Високий поріг для мови
-run_test "Високий поріг для мови" 0.7 0.0 500 250 30
+# Test 3: High speech threshold
+run_test "High speech threshold" 0.7 0.0 500 250 30
 
-# Тест 4: Низький негативний поріг
-run_test "Низький негативний поріг" 0.5 0.2 500 250 30
+# Test 4: Low negative threshold
+run_test "Low negative threshold" 0.5 0.2 500 250 30
 
-# Тест 5: Високий негативний поріг
-run_test "Високий негативний поріг" 0.5 0.4 500 250 30
+# Test 5: High negative threshold
+run_test "High negative threshold" 0.5 0.4 500 250 30
 
-# Тест 6: Коротка мінімальна тривалість тиші
-run_test "Коротка мінімальна тривалість тиші" 0.5 0.0 200 250 30
+# Test 6: Short minimum silence duration
+run_test "Short minimum silence duration" 0.5 0.0 200 250 30
 
-# Тест 7: Довга мінімальна тривалість тиші
-run_test "Довга мінімальна тривалість тиші" 0.5 0.0 1000 250 30
+# Test 7: Long minimum silence duration
+run_test "Long minimum silence duration" 0.5 0.0 1000 250 30
 
-# Тест 8: Коротка мінімальна тривалість мови
-run_test "Коротка мінімальна тривалість мови" 0.5 0.0 500 100 30
+# Test 8: Short minimum speech duration
+run_test "Short minimum speech duration" 0.5 0.0 500 100 30
 
-# Тест 9: Довга мінімальна тривалість мови
-run_test "Довга мінімальна тривалість мови" 0.5 0.0 500 500 30
+# Test 9: Long minimum speech duration
+run_test "Long minimum speech duration" 0.5 0.0 500 500 30
 
-# Тест 10: Без відступу для сегментів мови
-run_test "Без відступу для сегментів мови" 0.5 0.0 500 250 0
+# Test 10: No padding for speech segments
+run_test "No padding for speech segments" 0.5 0.0 500 250 0
 
-# Тест 11: Великий відступ для сегментів мови
-run_test "Великий відступ для сегментів мови" 0.5 0.0 500 250 100
+# Test 11: Large padding for speech segments
+run_test "Large padding for speech segments" 0.5 0.0 500 250 100
 
-echo "Всі тести завершено!" 
+echo "All tests completed!" 
