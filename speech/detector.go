@@ -1,7 +1,7 @@
 package speech
 
-// #cgo CFLAGS: -Wall -Werror -std=c99
-// #cgo LDFLAGS: -lonnxruntime
+// #cgo CFLAGS: -Wall -Werror -std=c99 -I/opt/homebrew/include
+// #cgo LDFLAGS: -L/opt/homebrew/lib -lonnxruntime
 // #include "ort_bridge.h"
 import "C"
 
@@ -50,8 +50,12 @@ type DetectorConfig struct {
 	SampleRate int
 	// The probability threshold above which we detect speech. A good default is 0.5.
 	Threshold float32
+	// The probability threshold below which we detect silence. A good default is 0.35.
+	NegativeThreshold float32
 	// The duration of silence to wait for each speech segment before separating it.
 	MinSilenceDurationMs int
+	// The minimum duration of speech to consider it as a valid speech segment. Shorter segments will be filtered out.
+	MinSpeechDurationMs int
 	// The padding to add to speech segments to avoid aggressive cutting.
 	SpeechPadMs int
 	// The loglevel for the onnx environment, by default it is set to LogLevelWarn.
@@ -71,8 +75,20 @@ func (c DetectorConfig) IsValid() error {
 		return fmt.Errorf("invalid Threshold: should be in range (0, 1)")
 	}
 
+	if c.NegativeThreshold < 0 || c.NegativeThreshold >= 1 {
+		return fmt.Errorf("invalid NegativeThreshold: should be in range [0, 1)")
+	}
+
+	if c.NegativeThreshold > 0 && c.NegativeThreshold >= c.Threshold {
+		return fmt.Errorf("invalid NegativeThreshold: should be less than Threshold")
+	}
+
 	if c.MinSilenceDurationMs < 0 {
 		return fmt.Errorf("invalid MinSilenceDurationMs: should be a positive number")
+	}
+
+	if c.MinSpeechDurationMs < 0 {
+		return fmt.Errorf("invalid MinSpeechDurationMs: should be a positive number")
 	}
 
 	if c.SpeechPadMs < 0 {
@@ -103,6 +119,16 @@ type Detector struct {
 func NewDetector(cfg DetectorConfig) (*Detector, error) {
 	if err := cfg.IsValid(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
+	}
+
+	// Set default value for NegativeThreshold if not provided
+	if cfg.NegativeThreshold == 0 {
+		cfg.NegativeThreshold = cfg.Threshold - 0.15
+	}
+
+	// Set default value for MinSpeechDurationMs if not provided
+	if cfg.MinSpeechDurationMs == 0 {
+		cfg.MinSpeechDurationMs = 250 // Default to 250ms
 	}
 
 	sd := Detector{
@@ -194,6 +220,7 @@ func (sd *Detector) Detect(pcm []float32) ([]Segment, error) {
 
 	minSilenceSamples := sd.cfg.MinSilenceDurationMs * sd.cfg.SampleRate / 1000
 	speechPadSamples := sd.cfg.SpeechPadMs * sd.cfg.SampleRate / 1000
+	minSpeechSamples := sd.cfg.MinSpeechDurationMs * sd.cfg.SampleRate / 1000
 
 	var segments []Segment
 	for i := 0; i < len(pcm)-windowSize; i += windowSize {
@@ -223,7 +250,7 @@ func (sd *Detector) Detect(pcm []float32) ([]Segment, error) {
 			})
 		}
 
-		if speechProb < (sd.cfg.Threshold-0.15) && sd.triggered {
+		if speechProb < sd.cfg.NegativeThreshold && sd.triggered {
 			if sd.tempEnd == 0 {
 				sd.tempEnd = sd.currSample
 			}
@@ -248,6 +275,30 @@ func (sd *Detector) Detect(pcm []float32) ([]Segment, error) {
 
 	slog.Debug("speech detection done", slog.Int("segmentsLen", len(segments)))
 
+	// Filter out segments that are too short
+	if sd.cfg.MinSpeechDurationMs > 0 {
+		var filteredSegments []Segment
+		for _, segment := range segments {
+			// Skip segments that don't have an end time yet
+			if segment.SpeechEndAt == 0 {
+				filteredSegments = append(filteredSegments, segment)
+				continue
+			}
+
+			durationSamples := (segment.SpeechEndAt - segment.SpeechStartAt) * float64(sd.cfg.SampleRate)
+			if durationSamples >= float64(minSpeechSamples) {
+				filteredSegments = append(filteredSegments, segment)
+			} else {
+				slog.Debug("filtered out short speech segment", 
+					slog.Float64("startAt", segment.SpeechStartAt),
+					slog.Float64("endAt", segment.SpeechEndAt),
+					slog.Float64("duration", segment.SpeechEndAt-segment.SpeechStartAt),
+					slog.Int("minDuration", sd.cfg.MinSpeechDurationMs))
+			}
+		}
+		segments = filteredSegments
+	}
+
 	return segments, nil
 }
 
@@ -271,6 +322,14 @@ func (sd *Detector) Reset() error {
 
 func (sd *Detector) SetThreshold(value float32) {
 	sd.cfg.Threshold = value
+}
+
+func (sd *Detector) SetNegativeThreshold(value float32) {
+	sd.cfg.NegativeThreshold = value
+}
+
+func (sd *Detector) SetMinSpeechDurationMs(value int) {
+	sd.cfg.MinSpeechDurationMs = value
 }
 
 func (sd *Detector) Destroy() error {

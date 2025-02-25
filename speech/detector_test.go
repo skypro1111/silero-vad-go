@@ -61,11 +61,42 @@ func TestDetectorConfigIsValid(t *testing.T) {
 			err: "invalid SpeechPadMs: should be a positive number",
 		},
 		{
+			name: "invalid MinSpeechDurationMs",
+			cfg: DetectorConfig{
+				ModelPath:          "../testfiles/silero_vad.onnx",
+				SampleRate:         16000,
+				Threshold:          0.5,
+				MinSpeechDurationMs: -1,
+			},
+			err: "invalid MinSpeechDurationMs: should be a positive number",
+		},
+		{
+			name: "invalid NegativeThreshold range",
+			cfg: DetectorConfig{
+				ModelPath:         "../testfiles/silero_vad.onnx",
+				SampleRate:        16000,
+				Threshold:         0.5,
+				NegativeThreshold: 0,
+			},
+			err: "invalid NegativeThreshold: should be in range (0, 1)",
+		},
+		{
+			name: "invalid NegativeThreshold greater than Threshold",
+			cfg: DetectorConfig{
+				ModelPath:         "../testfiles/silero_vad.onnx",
+				SampleRate:        16000,
+				Threshold:         0.5,
+				NegativeThreshold: 0.6,
+			},
+			err: "invalid NegativeThreshold: should be less than Threshold",
+		},
+		{
 			name: "valid",
 			cfg: DetectorConfig{
-				ModelPath:  "../testfiles/silero_vad.onnx",
-				SampleRate: 16000,
-				Threshold:  0.5,
+				ModelPath:         "../testfiles/silero_vad.onnx",
+				SampleRate:        16000,
+				Threshold:         0.5,
+				NegativeThreshold: 0.35,
 			},
 		},
 	}
@@ -217,5 +248,66 @@ func TestSpeechDetection(t *testing.T) {
 				SpeechEndAt:   0,
 			},
 		}, segments)
+	})
+
+	t.Run("negative threshold", func(t *testing.T) {
+		cfg.SpeechPadMs = 0
+		cfg.NegativeThreshold = 0.3 // Lower negative threshold should result in longer speech segments
+		sd, err := NewDetector(cfg)
+		require.NoError(t, err)
+		require.NotNil(t, sd)
+		defer func() {
+			require.NoError(t, sd.Destroy())
+		}()
+
+		segments, err := sd.Detect(samples)
+		require.NoError(t, err)
+		require.NotEmpty(t, segments)
+
+		// Test that we can change the negative threshold after creation
+		sd.SetNegativeThreshold(0.2)
+		err = sd.Reset()
+		require.NoError(t, err)
+		
+		segments2, err := sd.Detect(samples)
+		require.NoError(t, err)
+		require.NotEmpty(t, segments2)
+		
+		// With an even lower threshold, we expect longer speech segments
+		// or potentially fewer segments due to merging
+		require.True(t, len(segments2) <= len(segments), 
+			"Expected fewer or equal number of segments with lower threshold")
+	})
+
+	t.Run("min speech duration", func(t *testing.T) {
+		// Reset config
+		cfg.SpeechPadMs = 0
+		cfg.NegativeThreshold = 0
+		
+		// First run with no minimum speech duration
+		cfg.MinSpeechDurationMs = 0
+		sd, err := NewDetector(cfg)
+		require.NoError(t, err)
+		require.NotNil(t, sd)
+		defer func() {
+			require.NoError(t, sd.Destroy())
+		}()
+
+		segments, err := sd.Detect(samples)
+		require.NoError(t, err)
+		require.NotEmpty(t, segments)
+		initialSegmentCount := len(segments)
+
+		// Now set a high minimum speech duration that should filter out some segments
+		sd.SetMinSpeechDurationMs(1000) // 1 second
+		err = sd.Reset()
+		require.NoError(t, err)
+		
+		segments2, err := sd.Detect(samples)
+		require.NoError(t, err)
+		
+		// With a higher minimum speech duration, we expect fewer segments
+		require.True(t, len(segments2) <= initialSegmentCount, 
+			"Expected fewer segments with higher minimum speech duration")
 	})
 }

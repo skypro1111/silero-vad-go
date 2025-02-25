@@ -1,0 +1,32 @@
+{
+    "enableStatusBarItem": true,
+    "enableQuickPick": true,
+    "uploadOnSave": true,
+    "autoDelete": true,
+    "checkGitignore": false,
+    "activeTargets": [
+        "GPULV"
+    ],
+    "concurrency": 5, 
+    "ignore": [
+        ".git/**/*",
+        ".vscode/**/*"
+    ],
+    "include": [
+        "**/*"
+    ],
+    "targets": [
+        {
+            "name": "GPULV",
+            "type": "sftp",
+            "host": "10.24.2.184",
+            "port": 22,
+            "user": "skravchenko",
+            "password": "J13jagm777",
+            "dir": "/home/skravchenko/dev/silero-vad-go",
+            "baseDir": "/home/skravchenko/dev",
+            "privateKey": null,
+            "passphrase": null
+        }
+    ]
+}
