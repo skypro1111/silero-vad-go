@@ -5,7 +5,7 @@
 </h1>
 <h4 align="center">A simple Golang (CGO + ONNX Runtime) speech detector powered by Silero VAD</h4>
 <p align="center">
-  <a href="https://pkg.go.dev/github.com/streamer45/silero-vad-go"><img src="https://pkg.go.dev/badge/github.com/streamer45/silero-vad-go.svg" alt="Go Reference"></a>
+  <a href="https://pkg.go.dev/github.com/skypro1111/silero-vad-go"><img src="https://pkg.go.dev/badge/github.com/skypro1111/silero-vad-go.svg" alt="Go Reference"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
 <br>
@@ -50,7 +50,7 @@ sudo update_dyld_shared_cache
 ## Installation
 
 ```bash
-go get github.com/streamer45/silero-vad-go
+go get github.com/skypro1111/silero-vad-go
 ```
 
 ## Quick Start
@@ -64,7 +64,7 @@ wget https://github.com/snakers4/silero-vad/raw/master/files/silero_vad.onnx
 ```go
 package main
 
-import "github.com/streamer45/silero-vad-go/speech"
+import "github.com/skypro1111/silero-vad-go/speech"
 
 func main() {
     // Create detector configuration
