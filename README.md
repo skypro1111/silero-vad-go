@@ -16,8 +16,10 @@ Go implementation of the [Silero VAD](https://github.com/snakers4/silero-vad) (V
 
 ## Requirements
 
-- Go 1.16 or later
-- ONNX Runtime 1.16.0 or later
+- [Golang](https://go.dev/doc/install) >= v1.21
+- A C compiler (e.g. GCC)
+- ONNX Runtime (v1.18.1)
+- A [Silero VAD](https://github.com/snakers4/silero-vad) model (v5)
 
 ### Installing ONNX Runtime
 
@@ -28,6 +30,22 @@ brew install onnxruntime
 
 #### Linux
 Download and install from [ONNX Runtime releases](https://github.com/microsoft/onnxruntime/releases)
+
+For development, you need to export the following environment variables:
+
+#### Linux
+```sh
+LD_RUN_PATH="/usr/local/lib/onnxruntime-linux-x64-1.18.1/lib"
+LIBRARY_PATH="/usr/local/lib/onnxruntime-linux-x64-1.18.1/lib"
+C_INCLUDE_PATH="/usr/local/include/onnxruntime-linux-x64-1.18.1/include"
+```
+
+#### Darwin (MacOS)
+```sh
+LIBRARY_PATH="/usr/local/lib/onnxruntime-linux-x64-1.18.1/lib"
+C_INCLUDE_PATH="/usr/local/include/onnxruntime-linux-x64-1.18.1/include"
+sudo update_dyld_shared_cache
+```
 
 ## Installation
 
